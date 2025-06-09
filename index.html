@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>From Zero to Flutter App Developer: An Interactive Roadmap</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: "Subtle Earth" - A calm, minimalist palette with a light beige background (#F8F7F4), warm grays for text, and a muted teal accent (#00796B) for active states and highlights. -->
+    <!-- Application Structure Plan: The application uses a dashboard layout with persistent side navigation to enhance usability for a beginner. A vertical stepper on the left acts as a visual roadmap and primary navigation, constantly orienting the user within the overall learning path. Below it, a timeline chart gives an at-a-glance overview of the time commitment for each phase. The main content area on the right dynamically updates based on the selected phase. This content is further organized into tabs (Overview, Concepts, Resources) to break down information into digestible chunks, preventing cognitive overload and allowing the user to focus on one aspect at a time. This non-linear, dashboard approach is superior to a linear document as it empowers the user to explore at their own pace and easily revisit sections. -->
+    <!-- Visualization & Content Choices: 
+        1.  Report Info: Overall timeline estimates for each phase. -> Goal: Compare effort. -> Viz/Presentation: Horizontal Bar Chart (Chart.js/Canvas). -> Interaction: Hover for details, click to navigate to the phase. -> Justification: Provides an immediate, intuitive visual comparison of the duration of each learning phase, which is more effective than a simple table of numbers.
+        2.  Report Info: The 6 learning phases. -> Goal: Organize/Navigate. -> Viz/Presentation: Vertical Stepper (HTML/CSS/JS). -> Interaction: Click to select a phase and update the main content view. -> Justification: Visually represents the sequential nature of the learning path, serving as both a progress indicator and the main navigation hub.
+        3.  Report Info: Core concepts to master in each phase. -> Goal: Inform/Engage. -> Viz/Presentation: Interactive Checklist (HTML/CSS/JS). -> Interaction: Users can click to toggle a "completed" state, providing a sense of accomplishment and active participation. -> Justification: Transforms passive reading of a list into an active, engaging task, which can improve motivation and retention.
+        4.  Report Info: Tables of learning resources. -> Goal: Inform/Organize. -> Viz/Presentation: Responsive HTML Table. -> Interaction: Clickable links. -> Justification: This is the most appropriate and accessible format for presenting structured, tabular data with external links.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #F8F7F4;
+        }
+        .phase-step {
+            transition: all 0.3s ease;
+            border-left-color: #D1D5DB;
+        }
+        .phase-step.active {
+            background-color: #E0F2F1;
+            border-left-color: #00796B;
+        }
+        .phase-step.active h3 {
+            color: #004D40;
+        }
+        .tab-button {
+            transition: all 0.2s ease;
+            color: #6B7280;
+            border-bottom-color: transparent;
+        }
+        .tab-button.active {
+            color: #00796B;
+            border-bottom-color: #00796B;
+        }
+        .concept-item {
+            transition: all 0.2s ease;
+            cursor: pointer;
+            border-color: #E5E7EB;
+        }
+        .concept-item.completed {
+            background-color: #F0FAF9;
+        }
+        .concept-item.completed .concept-text {
+            text-decoration: line-through;
+            color: #9CA3AF;
+        }
+        .concept-item .checkbox {
+            transition: all 0.2s ease;
+            border-color: #9CA3AF;
+        }
+        .concept-item.completed .checkbox {
+            background-color: #00796B;
+            border-color: #00796B;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            height: 250px;
+            max-height: 250px;
+        }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <div id="app" class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+        <header class="text-center mb-10">
+            <h1 class="text-4xl font-bold text-gray-900 tracking-tight">Your Interactive Flutter Roadmap</h1>
+            <p class="mt-3 max-w-2xl mx-auto text-lg text-gray-600">From Zero to Building Your Vision: An Actionable Guide</p>
+        </header>
+
+        <div class="lg:grid lg:grid-cols-12 lg:gap-8">
+            <aside class="lg:col-span-4 xl:col-span-3 mb-8 lg:mb-0">
+                <div class="sticky top-8 space-y-8">
+                    <div>
+                        <h2 class="text-xl font-semibold text-gray-800 mb-4">Learning Phases</h2>
+                        <nav id="phase-navigation" class="space-y-2"></nav>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-semibold text-gray-800 mb-4">Estimated Timeline (Weeks)</h2>
+                        <div class="p-4 bg-white rounded-xl shadow-sm">
+                            <div class="chart-container">
+                                <canvas id="timelineChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            <main id="main-content" class="lg:col-span-8 xl:col-span-9">
+            </main>
+        </div>
+    </div>
+
+    <script>
+        const appData = {
+            phases: [
+                {
+                    id: 1,
+                    title: 'Programming Fundamentals',
+                    duration: [6, 8],
+                    overview: `This initial phase is about building a solid foundation. Before you can build an app, you need to learn how to "think like a programmer." This means breaking down large problems into small, logical steps. We use Python for this stage because its simple, English-like syntax lets you focus on core programming concepts like variables, loops, and functions, which are universal across almost all languages, including the Dart language you'll use for Flutter.`,
+                    concepts: [
+                        'What is Programming? (Giving instructions to a computer)',
+                        'Variables & Data Types (Storing info like text, numbers)',
+                        'Operators (Performing math and logic)',
+                        'Control Flow (If/else decisions and loops)',
+                        'Functions (Creating reusable blocks of code)',
+                        'Basic Data Structures (Lists and Dictionaries)',
+                        'Problem-Solving & Algorithmic Thinking'
+                    ],
+                    resources: [
+                        { name: 'Code in Place (Stanford)', link: 'https://codeinplace.stanford.edu/', type: 'University Course', notes: 'Excellent for deep fundamentals, video-based.' },
+                        { name: 'Intro to Python (Khan Academy)', link: 'https://www.khanacademy.org/computing/intro-to-python-fundamentals', type: 'Interactive Course', notes: 'Self-paced with hands-on exercises.' },
+                        { name: 'Intro to Python (Udacity)', link: 'https://www.udacity.com/course/introduction-to-python--ud1110', type: 'Video Course', notes: 'Well-structured and concise.' },
+                        { name: 'Learn Python (freeCodeCamp)', link: 'https://www.youtube.com/watch?v=rfscVS0vtbw', type: 'Video Course', notes: 'Comprehensive, step-by-step video tutorial.' },
+                        { name: 'Learn Python 3 (Codecademy)', link: 'https://www.codecademy.com/learn/learn-python-3', type: 'Interactive Course', notes: 'In-browser coding with immediate feedback.' }
+                    ]
+                },
+                {
+                    id: 2,
+                    title: 'Learning Dart',
+                    duration: [4, 6],
+                    overview: `Now that you understand the fundamentals of programming, it's time to learn Dart, the specific language created by Google that powers Flutter. All the logic, features, and functionality of a Flutter app are written in Dart. Mastering its unique features like null safety and asynchronous programming is critical for building functional, high-performance apps and will make the next phase much easier.`,
+                    concepts: [
+                        'Basic Dart Syntax (Variables, Types, Operators)',
+                        'Functions (including named and optional parameters)',
+                        'Object-Oriented Programming (Classes, Objects, Inheritance)',
+                        'Collections (Lists, Sets, Maps)',
+                        'Null Safety (Preventing common "null" errors)',
+                        'Asynchronous Programming (Future, async, await)',
+                        'Error Handling (Exceptions)'
+                    ],
+                    resources: [
+                        { name: 'Dart Tutorial (freeCodeCamp)', link: 'https://www.youtube.com/watch?v=Ej_Pcr4uC2Q', type: 'Video Course', notes: 'Full course video, great for a guided intro.' },
+                        { name: 'Official Dart Language Tour', link: 'https://dart.dev/language', type: 'Documentation', notes: 'Authoritative, text-based reference. Best after a video intro.' },
+                        { name: 'Dart Codelabs', link: 'https://dart.dev/codelabs', type: 'Codelab', notes: 'Hands-on exercises for practical application.' },
+                        { name: 'DartPad', link: 'https://dartpad.dev', type: 'Tool', notes: 'Online editor to run Dart code in your browser instantly.' }
+                    ]
+                },
+                {
+                    id: 3,
+                    title: 'Flutter UI Basics',
+                    duration: [8, 10],
+                    overview: `This is where your app starts to take visual form. In Flutter's world, "everything is a widget." You'll learn how to build user interfaces (UIs) by combining these widgets like building blocks. This phase covers creating layouts, adding text and images, handling user input like button taps, and managing the app's "state" (data that changes over time) to create dynamic and interactive UIs.`,
+                    concepts: [
+                        'Understanding the Widget Tree',
+                        'StatelessWidget vs. StatefulWidget',
+                        'Layout Widgets (Scaffold, Container, Row, Column, Stack)',
+                        'Displaying Content (Text, Image)',
+                        'Handling User Input (Buttons, TextFields)',
+                        'Basic Navigation (Moving between screens)',
+                        'Local State Management (using `setState`)',
+                        'Using Packages from pub.dev'
+                    ],
+                    resources: [
+                        { name: 'Write your first Flutter app', link: 'https://docs.flutter.dev/get-started/codelab', type: 'Codelab', notes: 'The highly recommended official starting point.' },
+                        { name: 'Flutter Cookbook', link: 'https://docs.flutter.dev/cookbook', type: 'Documentation', notes: 'Practical recipes for common tasks.' },
+                        { name: 'Flutter Course (freeCodeCamp)', link: 'https://www.youtube.com/watch?v=pTJJsmejUOQ', type: 'Video Course', notes: 'A very extensive, project-based course.' },
+                        { name: 'Flutter YouTube Channel', link: 'https://www.youtube.com/flutterdev', type: 'Video Series', notes: '"Widget of the Week" is great for learning specific widgets.' }
+                    ]
+                },
+                {
+                    id: 4,
+                    title: 'Backend Integration',
+                    duration: [10, 14],
+                    overview: `An app needs a "brain" on the internet to handle things like user accounts and storing data that can be shared or accessed later. This section introduces Firebase, a platform that provides these backend services without you having to build them from scratch. You'll learn to implement user registration/login (Authentication) and store data in a cloud database (Firestore), which is the foundation for collaborative features.`,
+                    concepts: [
+                        'Understanding Backend-as-a-Service (BaaS)',
+                        'Setting up Firebase in a Flutter project',
+                        'User Authentication (Registration, Login, Logout)',
+                        'Managing User Sessions (Auth State)',
+                        'Cloud Firestore (NoSQL Database)',
+                        'CRUD Operations (Create, Read, Update, Delete)',
+                        'Real-time Data Sync with Streams',
+                        'Basic Security Rules'
+                    ],
+                    resources: [
+                        { name: 'FlutterFire Overview', link: 'https://firebase.flutter.dev/docs/overview', type: 'Documentation', notes: 'Essential starting point for connecting Flutter and Firebase.' },
+                        { name: 'FlutterFire Auth Docs', link: 'https://firebase.flutter.dev/docs/auth/usage', type: 'Documentation', notes: 'Guide for user authentication.' },
+                        { name: 'FlutterFire Firestore Docs', link: 'https://firebase.flutter.dev/docs/firestore/usage', type: 'Documentation', notes: 'Guide for using the Firestore database.' },
+                        { name: 'Fireship.io (Flutter/Firebase)', link: 'https://www.youtube.com/c/fireship', type: 'Video Tutorials', notes: 'Concise, high-quality videos on Firebase features.' }
+                    ]
+                },
+                {
+                    id: 5,
+                    title: 'Advanced Features',
+                    duration: [10, 16],
+                    overview: `With the core app structure in place, you can now integrate more specialized and complex features. This involves working directly with device hardware for things like GPS and using external services for push notifications. You'll learn the crucial skill of finding, evaluating, and integrating third-party packages to extend your app's capabilities far beyond the basics.`,
+                    concepts: [
+                        'GPS & Location Services (using `geolocator` plugin)',
+                        'Handling Device Permissions (Android & iOS)',
+                        'Push Notifications with Firebase Cloud Messaging (FCM)',
+                        'Handling Foreground & Background Notifications',
+                        'Foundations of Collaboration (Shared Data Models)',
+                        'Basic Presence Detection (Online/Offline status)'
+                    ],
+                    resources: [
+                        { name: 'geolocator plugin', link: 'https://pub.dev/packages/geolocator', type: 'Plugin Docs', notes: 'For accessing device location.' },
+                        { name: 'firebase_messaging plugin', link: 'https://firebase.flutter.dev/docs/messaging/usage', type: 'Plugin Docs', notes: 'For sending and receiving push notifications.' },
+                        { name: 'Firestore Presence Solution', link: 'https://firebase.google.com/docs/firestore/solutions/presence', type: 'Documentation', notes: 'Advanced guide for building online/offline indicators.' }
+                    ]
+                },
+                {
+                    id: 6,
+                    title: 'Capstone Project',
+                    duration: [12, 20],
+                    overview: `This is the final and most rewarding phase, where you bring everything together to build the complete application you originally envisioned. This phase tests your ability to plan, architect, and integrate all the features you've learned into a single, cohesive product. You will move from following tutorials to becoming a true developer, solving problems and making architectural decisions.`,
+                    concepts: [
+                        'Project Planning (Defining Features, User Stories)',
+                        'UI/UX Flow & Wireframing',
+                        'Data Modeling for Firestore',
+                        'Structuring a Large Project (File Organization)',
+                        'Debugging with Flutter DevTools',
+                        'Problem-Solving (Reading errors, effective searching)',
+                        'Incremental Building & Testing'
+                    ],
+                    resources: [
+                        { name: 'Flutter DevTools', link: 'https://docs.flutter.dev/development/tools/devtools/overview', type: 'Tool Documentation', notes: 'Essential for debugging and inspecting your app.' },
+                        { name: 'Open Source Flutter Apps (GitHub)', link: 'https://github.com/topics/flutter-firebase', type: 'Project Examples', notes: 'Study real-world apps to learn about structure and best practices.' },
+                        { name: 'Full App Tutorials (YouTube)', link: 'https://www.youtube.com/results?search_query=flutter+firebase+full+app+tutorial', type: 'Video Courses', notes: 'Follow along with a complete app build to see how features are integrated.' }
+                    ]
+                }
+            ]
+        };
+
+        let state = {
+            currentPhaseId: 1,
+            activeTab: 'overview'
+        };
+
+        const mainContentEl = document.getElementById('main-content');
+        const phaseNavEl = document.getElementById('phase-navigation');
+
+        function renderPhaseNavigation() {
+            phaseNavEl.innerHTML = appData.phases.map(phase => `
+                <a href="#" class="phase-step block p-4 rounded-lg border-l-4 ${phase.id === state.currentPhaseId ? 'active' : 'hover:bg-gray-50'}" data-phase-id="${phase.id}">
+                    <h3 class="font-semibold text-lg text-gray-700">Phase ${phase.id}: ${phase.title}</h3>
+                    <p class="text-sm text-gray-500">${phase.duration[0]}-${phase.duration[1]} weeks</p>
+                </a>
+            `).join('');
+        }
+
+        function renderMainContent() {
+            const phase = appData.phases.find(p => p.id === state.currentPhaseId);
+            if (!phase) return;
+
+            mainContentEl.innerHTML = `
+                <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+                    <div class="p-6 sm:p-8">
+                        <span class="text-sm font-semibold uppercase tracking-wider text-teal-700">Phase ${phase.id}</span>
+                        <h2 class="text-3xl font-bold text-gray-900 mt-1">${phase.title}</h2>
+                    </div>
+                    <div class="border-b border-gray-200 px-6 sm:px-8">
+                        <nav class="-mb-px flex space-x-6" id="tab-navigation">
+                            <button class="tab-button py-4 px-1 border-b-2 font-medium text-sm" data-tab="overview">Overview</button>
+                            <button class="tab-button py-4 px-1 border-b-2 font-medium text-sm" data-tab="concepts">Core Concepts</button>
+                            <button class="tab-button py-4 px-1 border-b-2 font-medium text-sm" data-tab="resources">Resources</button>
+                        </nav>
+                    </div>
+                    <div id="tab-content" class="p-6 sm:p-8"></div>
+                </div>
+            `;
+            renderTabContent();
+        }
+
+        function renderTabContent() {
+            const phase = appData.phases.find
